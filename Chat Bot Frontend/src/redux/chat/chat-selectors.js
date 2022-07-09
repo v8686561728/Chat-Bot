@@ -1,0 +1,1 @@
+export const getConversation=(state)=>state.chat.conversationData
