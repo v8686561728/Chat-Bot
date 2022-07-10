@@ -1,8 +1,4 @@
-import React, {
-  Suspense,
-  useState,
-  useEffect
-} from "react";
+import React, { Suspense, useState, useEffect } from "react";
 import { Avatar, Button, Drawer, Input, Tabs } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import Pusher from "pusher-js";
@@ -10,6 +6,7 @@ import "../styles/chatScreen.css";
 import "../styles/avatar.css";
 import "../styles/badge.css";
 import bot from "../assets/images/bot.jpg";
+import { config } from "../../constants";
 import {
   addMessageToConversation,
   createChannel,
@@ -33,9 +30,9 @@ const selectedUser = {
 };
 
 const ChatScreen = () => {
-  const [chatOpen, setChatOpen] = useState(false);  // controls modal open/close
+  const [chatOpen, setChatOpen] = useState(false); // controls modal open/close
   const dispatch = useDispatch();
-  const conversationData = useSelector((state) => getConversation(state)); 
+  const conversationData = useSelector((state) => getConversation(state));
   const userId = useSelector((state) => getUserId(state));
   const subscriptionChannel = useSelector((state) =>
     getSubscriptionChannel(state)
@@ -50,16 +47,17 @@ const ChatScreen = () => {
   // when a user id is changed a new instance is created
   useEffect(() => {
     if (userId) {
-      const client = new Pusher("67bb469433cb732caa7a", {
-        authEndpoint: `https://insentstaging.api.insent.ai/pusher/presence/auth/visitor?userid=${userId}`,
-        cluster: "mt1",
+      const client = new Pusher(config.KEY, {
+        authEndpoint: `${config.AUTH_URL}?userid=${userId}`,
+        cluster: config.CLUSTER,
         encrypted: true,
       });
       setChannel(client.subscribe(subscriptionChannel));
     }
   }, [userId]);
 
-  useEffect(() => { // server event is binded with the client
+  useEffect(() => {
+    // server event is binded with the client
     if (channel) {
       channel.bind("pusher:subscription_succeeded", () => {
         channel.trigger("client-widget-message", {
@@ -118,7 +116,7 @@ const ChatScreen = () => {
                 key: field.key,
                 component: "input",
                 sentAt: new Date().getTime(),
-                handleInputSubmit
+                handleInputSubmit,
               });
             });
 
@@ -193,28 +191,29 @@ const ChatScreen = () => {
     setChatOpen(value);
   };
 
-  const handleReset = ()=>{
+  const handleReset = () => {
     let timeStamp = new Date().getTime();
-    const eventData={
-      "senderId": userId,
-      "channelName": channelId,
-      "message": {
-          "text": "@Discuter"
+    const eventData = {
+      senderId: userId,
+      channelName: channelId,
+      message: {
+        text: "@Discuter",
       },
-      "display": {
-          "img": null,
-          "name": null,
-          "lead": true,
-          "text": "@Discuter",
-          "time": timeStamp,
-          "type": "text"
-      }
-  }
-  channel.trigger("client-widget-message", eventData);
-  }
+      display: {
+        img: null,
+        name: null,
+        lead: true,
+        text: "@Discuter",
+        time: timeStamp,
+        type: "text",
+      },
+    };
+    const message = [{ type: "sent", text: "@Discuter" }];
+    dispatch(addMessageToConversation(message));
+    channel.trigger("client-widget-message", eventData);
+  };
   return (
     <div className={chatOpen ? "gx-chat-main" : "gx-right-corner"}>
-      
       {chatOpen && (
         <span className="gx-close" onClick={(e) => handleChatOpen(false, e)}>
           X
@@ -259,14 +258,6 @@ const ChatScreen = () => {
                 <div className="gx-flex-row gx-align-items-center">
                   <div className="gx-col">
                     <div className="gx-form-group" onClick={handleReset}>
-                      {/* <input
-                        id="required"
-                        className="gx-border-0 ant-input gx-chat-textarea"
-                        //   onKeyUp={this._handleKeyPress.bind(this)}
-                        //   onChange={this.updateMessageValue.bind(this)}
-                        //   value={message}
-                        placeholder="Type and hit enter to send message"
-                      /> */}
                       Restart conversation
                     </div>
                   </div>
