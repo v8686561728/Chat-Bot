@@ -450,9 +450,14 @@
     background-color: #ffffff;
     width: 100%;
     border-radius: 25px;
+    background-color: rgb(130, 56, 244);
+    text-align: center;
   }
   .gx-chat-main-footer .gx-form-group {
     margin-bottom: 0;
+    color: rgb(140, 233, 217);
+    font-size: 25px;
+    cursor: pointer;
   }
   .gx-chat-item {
     display: -webkit-flex;
