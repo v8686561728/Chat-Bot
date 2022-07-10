@@ -160,7 +160,7 @@ const ChatScreen = () => {
       senderId: userId,
       channelName: channelId,
       message: {
-        [data.type]: data.value,
+        [data.key]: data.value,
         lastMessageTimeStamp: timeStamp,
       },
       display: {
@@ -172,8 +172,8 @@ const ChatScreen = () => {
         type: "input",
         userId: "bot",
         input: {
-          key: data.type,
-          type: data.type,
+          key: data.key,
+          type: data.key,
           text: data.Text,
           validateDomains: true,
           value: data.value,
