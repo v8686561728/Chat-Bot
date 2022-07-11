@@ -29918,3 +29918,8 @@ h6,
   display: inline-flex;
 
 }
+
+.error{
+  padding: 25px;
+  color: red;
+}

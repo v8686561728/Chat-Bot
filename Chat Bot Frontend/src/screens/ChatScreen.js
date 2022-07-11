@@ -39,6 +39,7 @@ const ChatScreen = () => {
   );
   const channelId = useSelector((state) => getChannelId(state));
   const [channel, setChannel] = useState(); // pusher channel instance
+  let optionCode = []; // number of options that are of type button
 
   useEffect(() => {
     dispatch(createChannel()); // user id creation / channel id creation
@@ -88,12 +89,14 @@ const ChatScreen = () => {
     data?.messages.map((message) => {
       if (message.buttons) {
         result = message.buttons.states.map((state) => {
+          optionCode.push(state.sid);
           return {
             type: "sent",
             text: state.text,
             component: "button",
-            sentAt: new Date().getTime(),
+            sentAt: new Date(),
             optionCode: message.buttons.key,
+            id: state.sid,
             handleOptionClick,
           };
         });
@@ -104,7 +107,7 @@ const ChatScreen = () => {
               type: data.sender.id === "bot" ? "recieved" : "sent",
               text: message.text,
               component: "text",
-              sentAt: new Date().getTime(),
+              sentAt: new Date(),
             });
             break;
           case "input":
@@ -115,7 +118,7 @@ const ChatScreen = () => {
                 placeHolder: `Enter ${field.name}`,
                 key: field.key,
                 component: "input",
-                sentAt: new Date().getTime(),
+                sentAt: new Date(),
                 handleInputSubmit,
               });
             });
@@ -150,6 +153,21 @@ const ChatScreen = () => {
         text: data.text,
       },
     };
+
+    const message = {
+      type: "sent",
+      text: data.text,
+      component: "text",
+      sentAt: new Date(),
+    };
+
+    optionCode.forEach((code) => {
+      const button = window.document.getElementById(code);
+      button.remove();
+    });
+    optionCode = [];
+
+    dispatch(addMessageToConversation([message]));
     channel.trigger("client-widget-message", eventData);
   };
 

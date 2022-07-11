@@ -1,27 +1,56 @@
-import React,{useState} from "react";
+import React, { useState } from "react";
 import PropTypes from "prop-types";
-import parse from 'html-react-parser';
+import parse from "html-react-parser";
 import { Button, Input } from "antd";
+import { timeAgo } from "../../../../helpers/date-helper";
 const Search = Input.Search;
 
 const MessageComponent = ({ conversation }) => {
-  const [readOnly,setReadOnly]=useState(false)
-
+  
+  const [readOnly, setReadOnly] = useState(false);
+  const [error, setError] = useState("");
   const handleOptionClick = (conversation, e) => {
     e.preventDefault();
-    conversation.handleOptionClick(conversation)
+    conversation.handleOptionClick(conversation);
   };
-  const handleInput = (value)=>{
-    setReadOnly(true)
-    conversation.value=value
-    conversation.handleInputSubmit(conversation)
-  }
-
+  const handleInput = (value) => {
+    conversation.value = value;
+    if (validateInput(conversation)) {
+      conversation.handleInputSubmit(conversation);
+      setError('')
+      setReadOnly(true);
+    }
+  };
+ 
+  const validateInput = (conversation) => {
+    let regexp = "";
+    switch (conversation.key) {
+      case "email":
+        regexp =
+          /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+        
+        if (regexp.test(String(conversation.value).toLowerCase())) {
+          return true;
+        }
+        setError("Enter a valid email");
+        return false;
+      case "phone":
+        regexp = /^\d{10}$/;
+        if (regexp.test(conversation.value)) {
+          return true;
+        }
+        setError("Enter a valid phone number");
+        return false;
+      default:
+        return true;
+    }
+  };
+  
   // based on the component type message component is choosen
   switch (conversation.component) {
     case "button":
       return (
-        <div className="gx-bubble-block">
+        <div className="gx-bubble-block" id={conversation.id}>
           <Button
             className="chat-message-button"
             ghost
@@ -42,12 +71,20 @@ const MessageComponent = ({ conversation }) => {
             >
               <div className="gx-col">
                 <div className="gx-form-group">
-                 <Search placeholder={conversation.placeHolder||''} enterButton= {readOnly?"Saved":"Send"} size="large" readOnly={readOnly}  onSearch={(value) => handleInput(value)}/>
+                  <Search
+                    placeholder={conversation.placeHolder || ""}
+                    enterButton={readOnly ? "Saved" : "Send"}
+                    size="large"
+                    readOnly={readOnly}
+                    onSearch={(value) => handleInput(value)}
+                  />
                 </div>
+               
               </div>
             </div>
+            <span className="error">{error}</span>
             <div className="gx-time gx-text-muted gx-text-right gx-mt-2">
-              {conversation.sentAt}
+              {timeAgo(conversation.sentAt)}
             </div>
           </div>
         </div>
@@ -58,7 +95,7 @@ const MessageComponent = ({ conversation }) => {
           <div className="gx-bubble">
             <div className="gx-message">{parse(conversation.text)}</div>
             <div className="gx-time gx-text-muted gx-text-right gx-mt-2">
-              {conversation.sentAt}
+            {timeAgo(conversation.sentAt)}
             </div>
           </div>
         </div>
