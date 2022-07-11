@@ -77,12 +77,13 @@ const MessageComponent = ({ conversation }) => {
                     size="large"
                     readOnly={readOnly}
                     onSearch={(value) => handleInput(value)}
+                    data-testid="input"
                   />
                 </div>
                
               </div>
             </div>
-            <span className="error">{error}</span>
+            <span className="error" data-testid="error">{error}</span>
             <div className="gx-time gx-text-muted gx-text-right gx-mt-2">
               {timeAgo(conversation.sentAt)}
             </div>
@@ -103,6 +104,8 @@ const MessageComponent = ({ conversation }) => {
   }
 };
 
-MessageComponent.propTypes = {};
+MessageComponent.propTypes = {
+  conversation:PropTypes.object
+};
 
 export default MessageComponent;
