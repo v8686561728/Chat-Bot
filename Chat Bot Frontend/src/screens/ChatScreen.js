@@ -1,22 +1,24 @@
 import React, { Suspense, useState, useEffect } from "react";
-import { Avatar, Button, Drawer, Input, Tabs } from "antd";
+import { Avatar } from "antd";
+import parse from "html-react-parser";
 import { useDispatch, useSelector } from "react-redux";
-import Pusher from "pusher-js";
 import "../styles/chatScreen.css";
 import "../styles/avatar.css";
 import "../styles/badge.css";
-import bot from "../assets/images/bot.jpg";
-import { config } from "../../constants";
 import {
   addMessageToConversation,
   createChannel,
 } from "../redux/chat/chat-actions";
 import {
+  getChannel,
   getChannelId,
   getConversation,
-  getSubscriptionChannel,
+  getInitialData,
   getUserId,
+  isLoading
 } from "../redux/chat/chat-selectors";
+import { getCookie, setCookie } from "../helpers/cookies-helper";
+import { generateConveration } from "../helpers/conversation-helper";
 const CustomScrollbars = React.lazy(() =>
   import("../components/common/CustomScrollbars")
 );
@@ -24,111 +26,65 @@ const Conversation = React.lazy(() =>
   import("../components/application/chat/Conversation/index")
 );
 
-const selectedUser = {
-  name: "Chat Bot",
-  thumb: bot,
-};
-
 const ChatScreen = () => {
   const [chatOpen, setChatOpen] = useState(false); // controls modal open/close
+  const [isSubScriptionComplete, setIsSubScriptionComplete] = useState(false);
   const dispatch = useDispatch();
   const conversationData = useSelector((state) => getConversation(state));
   const userId = useSelector((state) => getUserId(state));
-  const subscriptionChannel = useSelector((state) =>
-    getSubscriptionChannel(state)
+  const { settings, popupMessage } = useSelector((state) =>
+    getInitialData(state)
   );
   const channelId = useSelector((state) => getChannelId(state));
-  const [channel, setChannel] = useState(); // pusher channel instance
-  let optionCode = []; // number of options that are of type button
-
+  const channel = useSelector((state) => getChannel(state));
+  const loading = useSelector((state) => isLoading(state));
   useEffect(() => {
-    dispatch(createChannel()); // user id creation / channel id creation
+    const user = getCookie("user-id");
+    dispatch(createChannel(user)); // user id creation / channel id creation
   }, []);
-
-  // when a user id is changed a new instance is created
   useEffect(() => {
-    if (userId) {
-      const client = new Pusher(config.KEY, {
-        authEndpoint: `${config.AUTH_URL}?userid=${userId}`,
-        cluster: config.CLUSTER,
-        encrypted: true,
-      });
-      setChannel(client.subscribe(subscriptionChannel));
-    }
+    setCookie("user-id", userId);
   }, [userId]);
 
   useEffect(() => {
     // server event is binded with the client
+
     if (channel) {
       channel.bind("pusher:subscription_succeeded", () => {
-        channel.trigger("client-widget-message", {
-          message: { lastMessageTimeStamp: new Date().getTime() },
-          senderId: userId,
-          channelName: channelId,
-        });
-      });
-      channel.bind("server-message", (data) => {
-        const result = modifyData(data);
-        dispatch(addMessageToConversation(result));
-        result.map((message) => {
-          if (message.component === "text") {
-            channel.trigger("client-widget-message", {
-              message: { lastMessageTimeStamp: new Date().getTime() },
-              senderId: userId,
-              channelName: channelId,
-            });
-          }
-        });
+        setIsSubScriptionComplete(true);
       });
     }
   }, [channel]);
 
-  // modifies the data to event specific data
-  const modifyData = (data) => {
-    let result = [];
-    data?.messages.map((message) => {
-      if (message.buttons) {
-        result = message.buttons.states.map((state) => {
-          optionCode.push(state.sid);
-          return {
-            type: "sent",
-            text: state.text,
-            component: "button",
-            sentAt: new Date(),
-            optionCode: message.buttons.key,
-            id: state.sid,
-            handleOptionClick,
-          };
+  useEffect(() => {
+    if (isSubScriptionComplete) {
+      if (conversationData.length == 1) {
+        channel.trigger("client-widget-message", {
+          message: {
+            lastMessageTimeStamp: new Date().getTime(),
+          },
+          senderId: userId,
+          channelName: channelId,
         });
-      } else {
-        switch (message.type) {
-          case "text":
-            result.push({
-              type: data.sender.id === "bot" ? "recieved" : "sent",
-              text: message.text,
-              component: "text",
-              sentAt: new Date(),
-            });
-            break;
-          case "input":
-            message.input.map((field) => {
-              result.push({
-                type: data.sender.id === "bot" ? "recieved" : "sent",
-                text: field.name,
-                placeHolder: `Enter ${field.name}`,
-                key: field.key,
-                component: "input",
-                sentAt: new Date(),
-                handleInputSubmit,
-              });
-            });
-
-            break;
-        }
       }
-    });
-    return result;
-  };
+      channel.bind("server-message", (data) => {
+        const result = generateConveration([], data.messages);
+        console.log(result);
+        dispatch(addMessageToConversation(result));
+        const { component } =
+          result.length > 0 ? result.pop() : { component: "" };
+        if (component && component === "text") {
+          channel.trigger("client-widget-message", {
+            message: {
+              lastMessageTimeStamp: new Date().getTime(),
+            },
+            senderId: userId,
+            channelName: channelId,
+          });
+        }
+      });
+    }
+  }, [isSubScriptionComplete]);
 
   // triggers an client event when button is clicked
   const handleOptionClick = (data) => {
@@ -161,11 +117,9 @@ const ChatScreen = () => {
       sentAt: new Date(),
     };
 
-    optionCode.forEach((code) => {
-      const button = window.document.getElementById(code);
-      button.remove();
-    });
-    optionCode = [];
+    document
+      .querySelectorAll(".button-function-class")
+      .forEach((el) => el.remove());
 
     dispatch(addMessageToConversation([message]));
     channel.trigger("client-widget-message", eventData);
@@ -230,7 +184,7 @@ const ChatScreen = () => {
     dispatch(addMessageToConversation(message));
     channel.trigger("client-widget-message", eventData);
   };
-  return (
+  return !loading && (
     <div className={chatOpen ? "gx-chat-main" : "gx-right-corner"}>
       {chatOpen && (
         <span className="gx-close" onClick={(e) => handleChatOpen(false, e)}>
@@ -250,25 +204,34 @@ const ChatScreen = () => {
                 </span>
                 <div className="gx-chat-main-header-info">
                   <div className="gx-chat-avatar gx-mr-2">
-                    <div className="gx-status-pos">
+                    <div
+                      className="gx-status-pos"
+                      style={
+                        settings && {
+                          backgroundColor: settings.color.headerBackgroundColor,
+                        }
+                      }
+                    >
                       <Avatar
-                        src={selectedUser.thumb}
+                        src={settings && settings.bot.img}
                         className="gx-rounded-circle gx-size-60"
                         alt=""
                       />
-                      <span className={`gx-status gx-active`} />
                     </div>
                   </div>
-
-                  <div className="gx-chat-contact-name">
-                    {selectedUser.name}
+                  <div>
+                    <div>{settings && settings.bot.company}</div>
+                    <div className="gx-chat-contact-name">
+                      You are chatting with {settings && settings.bot.name}
+                    </div>
                   </div>
                 </div>
               </div>
               <CustomScrollbars className="gx-chat-list-scroll">
                 <Conversation
                   conversationData={conversationData}
-                  selectedUser={selectedUser}
+                  handleInputSubmit={handleInputSubmit}
+                  handleOptionClick={handleOptionClick}
                 />
               </CustomScrollbars>
 
@@ -285,12 +248,20 @@ const ChatScreen = () => {
           </Suspense>
         </div>
       ) : (
-        <div onClick={(e) => handleChatOpen(true, e)}>
-          <Avatar
-            src={selectedUser.thumb}
-            className="gx-rounded-circle gx-size-60 "
-            alt=""
-          />
+        <div
+          className="popup-container"
+          onClick={(e) => handleChatOpen(true, e)}
+        >
+          <div className="popup-wrapper">
+            <div className="popup-message">
+              {popupMessage && parse(popupMessage.message)}
+            </div>
+            <Avatar
+              src={settings && settings.bot.img}
+              className="gx-rounded-circle gx-size-60 "
+              alt=""
+            />
+          </div>
         </div>
       )}
     </div>

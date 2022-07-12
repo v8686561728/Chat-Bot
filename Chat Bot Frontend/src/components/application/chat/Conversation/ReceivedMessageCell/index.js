@@ -3,14 +3,25 @@ import { Avatar } from "antd";
 import bot from "../../../../../assets/images/bot.jpg";
 import MessageComponent from "../MessageComponent";
 import SentMessageCell from "../SentMessageCell";
+import { useSelector } from "react-redux";
+import { getInitialData } from "../../../../../redux/chat/chat-selectors";
 
-const ReceivedMessageCell = ({ conversation }) => {
+const ReceivedMessageCell = ({ data, conversation }) => {
+  const { settings } = useSelector((state) => getInitialData(state));
   return (
-
     <div className="gx-chat-item">
-      <Avatar className="gx-size-40 gx-align-self-end" src={bot} alt="" />
-      <MessageComponent conversation={conversation} />
-   
+      <div className="chat-icon"
+        style={
+          settings && { backgroundColor: settings.color.headerBackgroundColor }
+        }
+      >
+        <Avatar
+          src={settings && settings.bot.img}
+          className="gx-rounded-circle gx-size-60"
+          alt=""
+        />
+      </div>
+      <MessageComponent data={data} conversation={conversation} />
     </div>
   );
 };

@@ -6,6 +6,8 @@ const initialState = {
   userId: "",
   subscriptionChannelId: "",
   initialData: "",
+  channel:'',
+  loading:true
 };
 
 const chatReducer = (state = initialState, { type, data }) => {
@@ -20,6 +22,10 @@ const chatReducer = (state = initialState, { type, data }) => {
       return { ...state, subscriptionChannelId: data };
     case constants.SET_INITIAL_DATA:
       return { ...state, initialData: data };
+    case constants.CHANNEL:
+      return { ...state, channel: data };
+    case constants.LOADING:
+      return {...state,loading:data}
     default:
       return state;
   }

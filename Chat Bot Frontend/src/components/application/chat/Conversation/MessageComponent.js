@@ -5,18 +5,18 @@ import { Button, Input } from "antd";
 import { timeAgo } from "../../../../helpers/date-helper";
 const Search = Input.Search;
 
-const MessageComponent = ({ conversation }) => {
-  
+const MessageComponent = ({ data,conversation }) => {
+  const { handleOptionClick,handleInputSubmit} = data
   const [readOnly, setReadOnly] = useState(false);
   const [error, setError] = useState("");
-  const handleOptionClick = (conversation, e) => {
+  const onOptionClick = (conversation, e) => {
     e.preventDefault();
-    conversation.handleOptionClick(conversation);
+    handleOptionClick(conversation);
   };
   const handleInput = (value) => {
     conversation.value = value;
     if (validateInput(conversation)) {
-      conversation.handleInputSubmit(conversation);
+      handleInputSubmit(conversation);
       setError('')
       setReadOnly(true);
     }
@@ -50,11 +50,11 @@ const MessageComponent = ({ conversation }) => {
   switch (conversation.component) {
     case "button":
       return (
-        <div className="gx-bubble-block" id={conversation.id}>
+        <div className={`gx-bubble-block ${conversation.id}`} name={conversation.id}>
           <Button
             className="chat-message-button"
             ghost
-            onClick={(e) => handleOptionClick(conversation, e)}
+            onClick={(e) => onOptionClick(conversation, e)}
           >
             {conversation.text}
           </Button>
@@ -105,7 +105,7 @@ const MessageComponent = ({ conversation }) => {
 };
 
 MessageComponent.propTypes = {
-  conversation:PropTypes.object
+  data:PropTypes.object
 };
 
 export default MessageComponent;
